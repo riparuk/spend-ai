@@ -45,7 +45,7 @@ const useTransactionsQuery = (selectedCategory: string, sortOrder: string) => {
     queryKey: ['transactions', selectedCategory, sortOrder],
     queryFn: async () => {
       const result = await getTransactionsAction();
-      const filtered = result
+      const filtered = result.data
         .filter(tx => {
           const date = new Date(tx.createdAt);
           const now = new Date();
@@ -68,6 +68,7 @@ const useTransactionsQuery = (selectedCategory: string, sortOrder: string) => {
           convertedAmount: tx.convertedAmount,
           convertedCurrency: tx.convertedCurrency,
         }));
+
       return filtered;
     },
   });
@@ -269,60 +270,60 @@ export default function HomeTab() {
             <Loader2 className="animate-spin" />
           )}
         </div>
-          {/* if no transactions in box style */}
-          {!isLoading && (filteredTransactions?.length ?? 0) === 0 && (
-            <Card className="border-dashed border-muted-foreground shadow-none">
-              <CardContent className="px-4">
-                <p className="text-muted-foreground text-sm">No transactions found today, try to add one :&#41;</p>
-              </CardContent>
-            </Card>
-          )}
-        {(filteredTransactions?.length ?? 0) > 0 ? (
-        <div ref={parent} className="space-y-2">
-        {filteredTransactions?.map((tx) => (
-          <Card
-            key={tx.id}
-            onClick={() => setSelectedExpense(tx)}
-            className="cursor-pointer hover:shadow-md transition shadow-none"
-          >
+        {/* if no transactions in box style */}
+        {!isLoading && (filteredTransactions?.length ?? 0) === 0 && (
+          <Card className="border-dashed border-muted-foreground shadow-none">
             <CardContent className="px-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="font-semibold"> {tx.name.length > 40 ? tx.name.slice(0, 40) + "..." : tx.name}</div>
-                  <div className="text-sm text-muted-foreground"> {tx.description.length > 40 ? tx.description.slice(0, 40) + "..." : tx.description}</div>
-                  <div className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(tx.createdAt), { addSuffix: true })}</div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </div>
-              <div className="flex items-end justify-between text-sm">
-                <CategoryBadge category={tx.category} />
-                {/* show original and converted amount */}
-                <div className="text-right">
-                  <p className="text-base font-medium">
-                    {tx.convertedAmount.toLocaleString(getBestLocale(), {
-                      style: "currency",
-                      currency: tx.convertedCurrency,
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {tx.amount.toLocaleString(getBestLocale(), {
-                      style: "currency",
-                      currency: tx.currency,
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
-              </div>
+              <p className="text-muted-foreground text-sm">No transactions found today, try to add one :&#41;</p>
             </CardContent>
           </Card>
-        ))}
-      </div>
-      ) : (
-        <LatestTransaction />
-      )}
+        )}
+        {(filteredTransactions?.length ?? 0) > 0 ? (
+          <div ref={parent} className="space-y-2">
+            {filteredTransactions?.map((tx) => (
+              <Card
+                key={tx.id}
+                onClick={() => setSelectedExpense(tx)}
+                className="cursor-pointer hover:shadow-md transition shadow-none"
+              >
+                <CardContent className="px-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-semibold"> {tx.name.length > 40 ? tx.name.slice(0, 40) + "..." : tx.name}</div>
+                      <div className="text-sm text-muted-foreground"> {tx.description.length > 40 ? tx.description.slice(0, 40) + "..." : tx.description}</div>
+                      <div className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(tx.createdAt), { addSuffix: true })}</div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div className="flex items-end justify-between text-sm">
+                    <CategoryBadge category={tx.category} />
+                    {/* show original and converted amount */}
+                    <div className="text-right">
+                      <p className="text-base font-medium">
+                        {tx.convertedAmount.toLocaleString(getBestLocale(), {
+                          style: "currency",
+                          currency: tx.convertedCurrency,
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {tx.amount.toLocaleString(getBestLocale(), {
+                          style: "currency",
+                          currency: tx.currency,
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <LatestTransaction />
+        )}
       </div>
       {selectedExpense && (
         <ExpenseModal

@@ -15,7 +15,7 @@ import {
     UpdateUserInput,
     getCachedExchangeRates,
     getLatestTransactions
- } from "./repository"
+} from "./repository"
 import { textToExpense, getInsights } from "./ai_actions"
 import { auth } from "@/auth"
 import { getBestLocale } from "./utils"
@@ -86,17 +86,32 @@ export async function createTransactionAction(data: {
 }
 
 export async function getTransactionsAction(filter?: {
-    category?: string;
-    currency?: string;
-    search?: string;
-    startDate?: Date;
-    endDate?: Date;
+    category?: string
+    currency?: string
+    search?: string
+    startDate?: Date
+    endDate?: Date
+    page?: number
+    limit?: number
 }) {
     const userId = await requireAuth()
     const user = await getUser(userId)
-    return await getTransactions(userId, user?.currency, filter)
-}
 
+    const page = filter?.page ?? 1
+    const limit = filter?.limit ?? 10
+    const skip = (page - 1) * limit
+
+    const { data, total } = await getTransactions(userId, user?.currency, {
+        ...filter,
+        skip,
+        take: limit,
+    })
+
+    return {
+        data,
+        total,
+    }
+}
 export async function getLatestTransactionsAction(limit: number = 3) {
     const userId = await requireAuth()
     const user = await getUser(userId)
@@ -154,14 +169,14 @@ export async function getTopExpensesAction(filter?: {
 export async function getAvailableCurrenciesAction() {
     const rates = await getCachedExchangeRates()
     const currencyCodes = Object.keys(rates)
-  
+
     const displayNames = new Intl.DisplayNames(getBestLocale(), {
-      type: 'currency',
+        type: 'currency',
     })
-  
+
     return currencyCodes.map(code => ({
-      code,
-      name: displayNames.of(code),
+        code,
+        name: displayNames.of(code),
     }))
-  }
-    
+}
+

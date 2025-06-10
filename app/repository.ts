@@ -88,7 +88,7 @@ export async function getLatestTransactions(
       : tx.amount * targetRate / rates[tx.currency],
     convertedCurrency: targetCurrency,
   }));
-} 
+}
 
 export async function getTransactions(
   userId: string,
@@ -99,48 +99,63 @@ export async function getTransactions(
     search?: string;
     startDate?: Date;
     endDate?: Date;
+    skip?: number;
+    take?: number;
   },
 ) {
-  const transactions = await prisma.transaction.findMany({
-    where: {
-      userId,
-      ...(filter?.category && { category: filter.category }),
-      ...(filter?.currency && { currency: filter.currency }),
-      ...(filter?.search && {
-        OR: [
-          { name: { contains: filter.search } },
-          { description: { contains: filter.search } },
-        ]
-      }),
-      ...(filter?.startDate && {
-        createdAt: { gte: filter.startDate }
-      }),
-      ...(filter?.endDate && {
+  // Reusable `where` condition
+  const where = {
+    userId,
+    ...(filter?.category && { category: filter.category }),
+    ...(filter?.currency && { currency: filter.currency }),
+    ...(filter?.search && {
+      OR: [
+        { name: { contains: filter.search, mode: "insensitive" } },
+        { description: { contains: filter.search, mode: "insensitive" } },
+      ],
+    }),
+    ...(filter?.startDate || filter?.endDate
+      ? {
         createdAt: {
-          ...(filter?.startDate ? { gte: filter.startDate } : {}),
-          lte: filter.endDate
-        }
-      }),
-    },
+          ...(filter?.startDate && { gte: filter.startDate }),
+          ...(filter?.endDate && { lte: filter.endDate }),
+        },
+      }
+      : {}),
+  };
+
+  // Count total matching transactions (for pagination)
+  const total = await prisma.transaction.count({ where });
+  const transactions = await prisma.transaction.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    skip: filter?.skip,
+    take: filter?.take,
   });
 
+  // Get exchange rates
   const rates = await getCachedExchangeRates();
   const targetRate = rates[targetCurrency];
+
   if (!targetRate || targetRate === 0) {
     throw new Error(`Rate for target currency ${targetCurrency} not found`);
   }
-  return transactions.map((tx) => {
+
+  const data = transactions.map((tx) => {
     const fromRate = rates[tx.currency] ?? 1;
-    const convertedAmount = tx.currency === targetCurrency
-      ? tx.amount
-      : tx.amount * targetRate / fromRate;
-      
+    const convertedAmount =
+      tx.currency === targetCurrency
+        ? tx.amount
+        : (tx.amount * targetRate) / fromRate;
+
     return {
       ...tx,
       convertedAmount,
       convertedCurrency: targetCurrency,
     };
   });
+
+  return { data, total };
 }
 
 export async function createTransaction(transaction: Prisma.TransactionCreateInput) {
